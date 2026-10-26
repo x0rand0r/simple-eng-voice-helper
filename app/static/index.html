@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>Souffleur</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%235b5bd6'/%3E%3Cpath d='M9 13v6M13 10v12M17 7v18M21 11v10M25 14v4' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/styles.css?v={{v}}">
+  <script>
+    // apply theme and scale before the first paint (the server copy arrives a moment later)
+    try {
+      const ui = JSON.parse(localStorage.getItem('souffleur.ui') || '{}');
+      if (ui.theme && ui.theme !== 'auto') document.documentElement.dataset.theme = ui.theme;
+      if (ui.scale) document.documentElement.style.setProperty('--ui-scale', ui.scale);
+    } catch (e) { /* storage unavailable */ }
+  </script>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+    <symbol id="i-phones" viewBox="0 0 24 24"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/></symbol>
+    <symbol id="i-swap" viewBox="0 0 24 24"><path d="M5 9h14l-4-4M19 15H5l4 4"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></symbol>
+    <symbol id="i-new" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></symbol>
+    <symbol id="i-speak" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8M4 4v4h4M4 13a8 8 0 0 0 14.3 4.9L20 16M20 20v-4h-4"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
+  </svg>
+
+  <header class="topbar float" id="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <span class="brand-name">Souffleur</span>
+      <span class="conn" id="conn" title="Подключение…"></span>
+    </div>
+    <button class="lang-pair" id="langPair" type="button" title="Поменять языки A и B местами">
+      <span class="lang" id="langA">RU</span>
+      <svg class="ic"><use href="#i-swap"/></svg>
+      <span class="lang" id="langB">EN</span>
+    </button>
+    <div class="top-actions">
+      <button class="ctx" id="ctxBtn" type="button" title="Контекст, отправляемый в GPT. Нажмите, чтобы очистить">
+        <svg class="ctx-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15"/><circle cx="18" cy="18" r="15" id="ctxArc" pathLength="100"/></svg>
+        <span class="ctx-text" id="ctxText">0</span>
+      </button>
+      <button class="icon-btn" id="newChatBtn" type="button" title="Новый чат (предыдущий останется в логах)"><svg class="ic"><use href="#i-new"/></svg></button>
+      <button class="icon-btn" id="settingsBtn" type="button" title="Настройки"><svg class="ic"><use href="#i-sliders"/></svg></button>
+    </div>
+  </header>
+
+  <main class="doc" id="doc">
+    <p class="doc-start"><em>the chat started at <span id="startTime">--:--</span></em></p>
+    <div class="lines" id="lines"></div>
+    <div class="empty" id="empty">
+      <h2>Готов слушать</h2>
+      <p>Нажмите <b>Слушать</b>. Собеседник появится как <span class="tag them">User</span>, вы — как <span class="tag me">You</span>, а более естественный вариант вашей фразы — как <span class="tag sg">Suggest</span>.</p>
+      <p class="muted">Фразу можно и напечатать внизу. <kbd>Ctrl</kbd> + <kbd>M</kbd> — включить или выключить прослушивание.</p>
+    </div>
+  </main>
+
+  <button class="fab-down float" id="toBottom" type="button" title="К последним сообщениям" hidden><svg class="ic"><use href="#i-down"/></svg></button>
+
+  <footer class="dock float" id="dock">
+    <div class="dock-controls">
+      <button class="src them" id="srcLoop" type="button" data-key="loop" aria-pressed="true">
+        <svg class="ic"><use href="#i-phones"/></svg>
+        <span class="src-body"><span class="src-label">Собеседник</span><span class="meter"><i></i></span></span>
+      </button>
+      <button class="rec" id="recBtn" type="button" aria-pressed="false" title="Слушать / стоп (Ctrl+M)">
+        <svg class="ic rec-on"><use href="#i-mic"/></svg>
+        <svg class="ic rec-off"><use href="#i-stop"/></svg>
+        <span id="recLabel">Слушать</span>
+      </button>
+      <button class="src me" id="srcMic" type="button" data-key="mic" aria-pressed="true">
+        <svg class="ic"><use href="#i-mic"/></svg>
+        <span class="src-body"><span class="src-label">Я</span><span class="meter"><i></i></span></span>
+      </button>
+    </div>
+    <form class="composer" id="composer" autocomplete="off">
+      <input id="textInput" type="text" maxlength="2000" enterkeyhint="send"
+             placeholder="Напишите фразу — сделаю её естественнее">
+      <button class="send" type="submit" title="Отправить (Enter)"><svg class="ic"><use href="#i-send"/></svg></button>
+    </form>
+  </footer>
+
+  <div class="scrim" id="scrim" hidden></div>
+
+  <aside class="drawer float" id="drawer" aria-label="Настройки" tabindex="-1" inert>
+    <div class="drawer-head">
+      <h2>Настройки</h2>
+      <span class="saved" id="savedMark"><svg class="ic"><use href="#i-check"/></svg>Сохранено</span>
+      <button class="icon-btn" id="closeDrawer" type="button" title="Закрыть (Esc)"><svg class="ic"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="drawer-body">
+      <section>
+        <h3>OpenAI</h3>
+        <div class="field">
+          <label for="apiKey">API ключ</label>
+          <div class="row">
+            <input id="apiKey" type="password" placeholder="sk-…" autocomplete="off" spellcheck="false">
+            <button class="btn" id="checkKey" type="button">Проверить</button>
+          </div>
+          <small id="apiKeyHint">Ключ хранится только на этом компьютере (data/settings.json).</small>
+        </div>
+        <div class="field">
+          <label for="llmModel">Модель GPT</label>
+          <input id="llmModel" list="llmModels" data-key="llm_model" spellcheck="false">
+          <datalist id="llmModels"></datalist>
+          <small>По умолчанию gpt-4.1-mini — быстрая и недорогая.</small>
+        </div>
+        <div class="field">
+          <label for="sttModel">Распознавание речи</label>
+          <input id="sttModel" list="sttModels" data-key="stt_model" spellcheck="false">
+          <datalist id="sttModels"></datalist>
+        </div>
+        <div class="field">
+          <label for="baseUrl">Base URL <em>необязательно</em></label>
+          <input id="baseUrl" data-key="base_url" placeholder="https://api.openai.com/v1" spellcheck="false">
+          <small>Для прокси или OpenAI-совместимого сервиса.</small>
+        </div>
+      </section>
+
+      <section>
+        <h3>Языки</h3>
+        <div class="lang-row">
+          <div class="field"><label for="langASel">Язык A</label><select id="langASel" data-key="lang_a"></select></div>
+          <button class="icon-btn swap" id="swapLangs" type="button" title="Поменять местами"><svg class="ic"><use href="#i-swap"/></svg></button>
+          <div class="field"><label for="langBSel">Язык B</label><select id="langBSel" data-key="lang_b"></select></div>
+        </div>
+        <small class="block">A — ваш родной язык, B — язык, на котором вы тренируетесь говорить.</small>
+        <div class="field">
+          <label for="translateMode">Перевод собеседника</label>
+          <select id="translateMode" data-key="translate_mode">
+            <option value="auto">Авто: A → B, а речь на B → A</option>
+            <option value="a_to_b">Только A → B</option>
+            <option value="off">Не переводить</option>
+          </select>
+        </div>
+      </section>
+
+      <section>
+        <h3>Подсказки</h3>
+        <div class="field">
+          <span class="label">Как улучшать мои фразы</span>
+          <div class="seg" data-key="coach_style" role="group">
+            <button type="button" data-value="minimal">Исправить</button>
+            <button type="button" data-value="natural">Естественно</button>
+            <button type="button" data-value="advanced">Продвинуто</button>
+          </div>
+          <small id="styleHint"></small>
+        </div>
+        <label class="switch"><input type="checkbox" data-key="explain"><span>Коротко объяснять ошибки</span></label>
+      </section>
+
+      <section>
+        <h3>Аудио</h3>
+        <div class="field">
+          <label for="micDevice">Микрофон</label>
+          <select id="micDevice" data-key="mic_device"></select>
+        </div>
+        <div class="field">
+          <label for="loopDevice">Звук собеседника (вывод Windows)</label>
+          <select id="loopDevice" data-key="loop_device"></select>
+          <small>Можно выбрать отдельное устройство вывода (например, канал звонка в аудиомикшере), чтобы слышать только собеседника.</small>
+        </div>
+        <button class="btn ghost" id="refreshDevices" type="button"><svg class="ic"><use href="#i-refresh"/></svg>Обновить устройства</button>
+        <div class="field range">
+          <label for="vadThr">Порог детектора речи <output data-for="vad_threshold"></output></label>
+          <input id="vadThr" type="range" min="0.2" max="0.9" step="0.05" data-key="vad_threshold">
+          <small>Ниже — чувствительнее, выше — меньше ложных срабатываний.</small>
+        </div>
+        <div class="field range">
+          <label for="pauseMs">Пауза, завершающая фразу <output data-for="pause_ms"></output></label>
+          <input id="pauseMs" type="range" min="300" max="1500" step="50" data-key="pause_ms">
+          <small>Короче — быстрее ответ, длиннее — меньше фраз рвётся пополам.</small>
+        </div>
+        <div class="field range">
+          <label for="gateDb">Отсекать тихие голоса <output data-for="voice_gate_db"></output></label>
+          <input id="gateDb" type="range" min="0" max="30" step="1" data-key="voice_gate_db">
+          <small>Слушаем самый громкий голос собеседника; голоса тише него на N дБ обрезаются.</small>
+        </div>
+        <div class="field">
+          <label for="echoGuard">Эхо-защита</label>
+          <select id="echoGuard" data-key="echo_guard">
+            <option value="mic_priority">Пока говорю я — не слушать собеседника</option>
+            <option value="loop_priority">Пока говорит собеседник — не слушать микрофон</option>
+            <option value="off">Выключена</option>
+          </select>
+          <small>Первый вариант — если ваш голос попадает в наушники (мониторинг микрофона). Второй — если вы без наушников.</small>
+        </div>
+      </section>
+
+      <section>
+        <h3>Контекст GPT</h3>
+        <div class="field range">
+          <label for="ctxTokens">Окно контекста <output data-for="context_tokens"></output></label>
+          <input id="ctxTokens" type="range" min="0" max="16000" step="250" data-key="context_tokens">
+          <small>Сколько последней переписки уходит в GPT. При переполнении старые сообщения обрезаются.</small>
+        </div>
+        <button class="btn ghost" id="clearCtx" type="button">Очистить контекст</button>
+      </section>
+
+      <section>
+        <h3>Интерфейс</h3>
+        <div class="field range">
+          <label for="uiScale">Масштаб <output data-for="ui_scale"></output></label>
+          <input id="uiScale" type="range" min="0.7" max="1.8" step="0.05" data-key="ui_scale">
+        </div>
+        <div class="field">
+          <span class="label">Тема</span>
+          <div class="seg" data-key="theme" role="group">
+            <button type="button" data-value="auto">Системная</button>
+            <button type="button" data-value="light">Светлая</button>
+            <button type="button" data-value="dark">Тёмная</button>
+          </div>
+        </div>
+        <label class="switch"><input type="checkbox" data-key="auto_exit"><span>Завершать программу при закрытии окна</span></label>
+      </section>
+
+      <section>
+        <h3>Лог разговора</h3>
+        <p class="path" id="logPath"></p>
+        <button class="btn ghost" id="openLogs" type="button"><svg class="ic"><use href="#i-folder"/></svg>Открыть папку логов</button>
+      </section>
+    </div>
+  </aside>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+  <script src="/static/app.js?v={{v}}"></script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+fastapi>=0.110
+uvicorn>=0.29
+websockets>=12.0
+openai>=1.60
+numpy>=1.26
+PyAudioWPatch>=0.2.12.7
+onnxruntime>=1.18
+soxr>=0.3.7
+tiktoken>=0.7
